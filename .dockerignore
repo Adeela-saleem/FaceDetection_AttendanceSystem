@@ -1,0 +1,7 @@
+__pycache__/
+.venv/
+attendance.db
+Known_Faces/
+avatars/
+tests/
+.git/

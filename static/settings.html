@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Settings</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><script src="/static/app.js"></script>
+<script>
+initPage({title: 'Settings'}).then(async main => {
+  const sys = ME.can.edit_settings, s = SETTINGS;
+  main.innerHTML = `
+  <div class="cols">
+    <div class="card"><h2>My account</h2>
+      <p class="muted small" style="margin-top:0">${esc(ME.full_name)} · @${esc(ME.username)} · <span class="badge brand">${esc(ME.role_label)}</span></p>
+      <form id="pw" class="form"><div class="full"><label>Current password</label><input name="current" type="password" required autocomplete="current-password"></div>
+        <div class="full"><label>New password (min 8)</label><input name="new" type="password" required minlength="8" autocomplete="new-password"></div>
+        <div class="full"><button class="btn">Change password</button></div></form>
+      <p class="muted small">Changing the password logs out other devices.</p></div>
+    <div class="card"><h2>System ${sys ? '' : '<span class="badge">read-only</span>'}</h2>
+      <form id="sys" class="form"><fieldset style="border:0;padding:0;margin:0;display:contents" ${sys ? '' : 'disabled'}>
+        <div class="full"><label>Institute name</label><input name="institute_name" value="${esc(s.institute_name)}" required maxlength="80"></div>
+        <div class="full"><label>Match threshold: <b id="tv">${s.threshold}</b> <span class="muted">(lower = stricter)</span></label>
+          <input name="threshold" type="range" min="0.35" max="0.65" step="0.01" value="${s.threshold}" oninput="tv.textContent=this.value"></div>
+        <div><label>Late after (only for sections without a class time)</label><input name="late_after" type="time" value="${esc(s.late_after)}"></div>
+        <div><label>Attendance opens this many minutes before class</label><input name="early_minutes" type="number" min="0" max="240" value="${s.early_minutes}"></div>
+        <div><label>Live confirm scans</label><input name="confirm_frames" type="number" min="1" max="10" value="${s.confirm_frames}"></div>
+        ${sys ? '<div class="full"><button class="btn">Save settings</button></div>' : ''}</fieldset></form>
+  </div>
+  ${ME.can.view_audit ? '<div class="card"><h2>Activity log</h2><div class="tablewrap" id="audit"></div></div>' : ''}`;
+
+  $('#pw').onsubmit = async e => { e.preventDefault();
+    try { await api('/api/auth/change-password', {method: 'POST', body: Object.fromEntries(new FormData(e.target))}); e.target.reset(); toast('Password changed', 'ok'); }
+    catch (x) { toast(x.message, 'bad'); } };
+  $('#sys').onsubmit = async e => { e.preventDefault();
+    const v = Object.fromEntries(new FormData(e.target)); v.threshold = +v.threshold; v.confirm_frames = +v.confirm_frames; v.early_minutes = +v.early_minutes;
+    try { await api('/api/settings', {method: 'PUT', body: v}); toast('Settings saved', 'ok'); loadAudit(); } catch (x) { toast(x.message, 'bad'); } };
+  async function loadAudit() {
+    if (!ME.can.view_audit) return;
+    const {entries} = await api('/api/audit?limit=100');
+    $('#audit').innerHTML = entries.length ? `<table><tr><th>When</th><th>User</th><th>Action</th><th>Detail</th></tr>${entries.map(a =>
+      `<tr><td class="muted small">${a.ts.replace('T', ' ')}</td><td>${esc(a.username || '-')}</td><td><span class="badge">${esc(a.action)}</span></td><td class="wrap small">${esc(a.detail || '')}</td></tr>`).join('')}</table>`
+      : '<div class="empty">No activity has been recorded yet.</div>';
+  }
+  loadAudit();
+});
+</script></body></html>

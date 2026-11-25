@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Students</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><script src="/static/app.js"></script>
+<script>
+initPage({title: 'Students'}).then(main => {
+  const can = ME.can.manage_students;
+  main.innerHTML = `<div class="card">
+    <div class="toolbar"><div><label>Search</label><input id="q" placeholder="Name or roll no"></div>
+      <div><label>Section</label><select id="sec"></select></div>
+      <span class="muted small" id="total"></span>
+      ${can ? '<a class="btn right" href="/register" style="text-decoration:none">➕ Register student</a>' : ''}</div>
+    <div id="unassigned" class="notice warn hidden"></div>
+    ${can ? '<div class="bulk hidden" id="bulk"><b id="nsel"></b><select id="target"></select><button class="btn sm" id="move">Move to section</button></div>' : ''}
+    <div class="tablewrap" id="tbl"></div></div>`;
+  let rows = [], sections = [], timer, secId = new URLSearchParams(location.search).get('section') || '0';
+  const secOptions = (sel, none = 'Unassigned') => `<option value="">${none}</option>` +
+    sections.map(x => `<option value="${x.id}" ${x.id == sel ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
+  const sel = () => [...document.querySelectorAll('.pick:checked')].map(x => +x.value);
+  function bulk() { if (!can) return; const n = sel().length; $('#bulk').classList.toggle('hidden', !n); $('#nsel').textContent = `${n} selected`; }
+  async function load() {
+    const q = $('#q').value;
+    const d = await api(`/api/students?q=${encodeURIComponent(q)}&section_id=${secId}`);
+    rows = d.students; sections = d.sections;
+    if (ME.role === 'teacher') {
+      $('#sec').innerHTML = sections.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+      if (!sections.some(x => String(x.id) === String(secId))) {
+        secId = sections.length ? String(sections[0].id) : '0';
+        if (sections.length) {
+          $('#sec').value = secId;
+          return load();
+        }
+      }
+      $('#sec').value = secId;
+      if (!sections.length) {
+        $('#sec').innerHTML = '<option value="0">No section assigned</option>';
+        $('#sec').disabled = true;
+      }
+    } else {
+      $('#sec').innerHTML = '<option value="0">All</option>' + (can ? '<option value="-1">Unassigned</option>' : '') +
+        sections.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+      $('#sec').value = secId;
+    }
+    if (can) $('#target').innerHTML = secOptions('', '- Select section -');
+    $('#total').textContent = `${rows.length} student${rows.length === 1 ? '' : 's'}`;
+    const un = rows.filter(s => !s.section_id).length;
+    $('#unassigned').classList.toggle('hidden', !(can && un));
+    $('#unassigned').textContent = `${un} student(s) do not have a section assigned.`;
+    const teacherView = ME.role === 'teacher';
+    const cols = teacherView ? 3 : (can ? 7 : 5); let last = Symbol(), html = '';
+    for (const s of rows) {
+      if (s.section_id !== last) { last = s.section_id;
+        const sec = sections.find(x => x.id === s.section_id);
+        if (!teacherView) html += `<tr class="grp"><td colspan="${cols}">${esc(sec ? sec.name : 'Unassigned')}<span>${sec ? esc(fmtWindow(sec)) + ' · ' + sec.n_students + ' students' : ''}</span></td></tr>`; }
+      html += `<tr>${can && !teacherView ? `<td><input type="checkbox" class="pick" value="${s.id}"></td>` : ''}
+        <td>${teacherView ? esc(s.name) : avatarHtml(s)+esc(s.name)}</td><td>${esc(s.roll_no || '-')}</td>
+        ${teacherView ? '' : `<td>${s.n_photos ? `<span class="badge ${s.n_photos >= 3 ? 'ok' : 'warn'}">${s.n_photos}</span>` : '<span class="badge bad">0</span>'}</td>
+        <td class="muted small">${s.created_at.slice(0, 10)}</td>`}
+        ${can && !teacherView ? `<td class="act"><a class="btn ghost sm" style="text-decoration:none" href="/register?student=${s.id}">+ Photos</a>
+          <button class="btn ghost sm" data-a="edit" data-id="${s.id}">Edit</button>
+          <button class="btn ghost sm" data-a="reset" data-id="${s.id}">Reset faces</button>
+          <button class="btn danger sm" data-a="del" data-id="${s.id}">Delete</button></td>` : ''}</tr>`;
+    }
+    $('#tbl').innerHTML = rows.length ? `<table><tr>${teacherView ? '' : (can ? '<th><input type="checkbox" id="all"></th>' : '')}<th>Student</th><th>Roll no</th>${teacherView ? '' : '<th>Face photos</th><th>Registered</th>'}${can && !teacherView ? '<th></th>' : ''}</tr>${html}</table>`
+      : `<div class="empty">${ME.role === 'teacher' && !sections.length ? 'No section has been assigned to you.' : 'No students found.'}</div>`;
+    bulk();
+  }
+  $('#q').oninput = () => { clearTimeout(timer); timer = setTimeout(load, 250); };
+  $('#sec').onchange = () => { secId = $('#sec').value; load(); };
+  if (can) {
+    $('#tbl').addEventListener('change', e => {
+      if (e.target.id === 'all') document.querySelectorAll('.pick').forEach(x => x.checked = e.target.checked);
+      bulk(); });
+    $('#move').onclick = async () => {
+      const ids = sel(), to = $('#target').value; if (!to) return toast('Select a section', 'bad');
+      const r = await api('/api/students/assign-section', {method: 'POST', body: {student_ids: ids, section_id: +to}});
+      toast(`${r.moved} student(s) moved`, 'ok'); load(); };
+  }
+  $('#tbl').onclick = async e => {
+    const b = e.target.closest('button[data-a]'); if (!b) return;
+    const s = rows.find(x => x.id == b.dataset.id);
+    if (b.dataset.a === 'edit') dialog({title: 'Edit student', html: `
+        <div><label>Name</label><input name="name" value="${esc(s.name)}" required maxlength="80"></div>
+        <div><label>Section</label><select name="section_id">${secOptions(s.section_id)}</select></div>
+        <div><label>Roll no (leave empty for automatic)</label><input name="roll_no" value="${esc(s.roll_no || '')}" maxlength="30"></div>`,
+      onSubmit: async f => { const v = Object.fromEntries(new FormData(f)); v.section_id = v.section_id ? +v.section_id : null;
+        await api(`/api/students/${s.id}`, {method: 'PATCH', body: v}); toast('Saved', 'ok'); load(); }});
+    if (b.dataset.a === 'reset' && await confirmBox('Reset face data', `Remove all face data for ${s.name}? You will need to add photos again.`, 'Reset')) {
+      await api(`/api/students/${s.id}/photos`, {method: 'DELETE'}); toast('Face data reset', 'ok'); load(); }
+    if (b.dataset.a === 'del' && await confirmBox('Delete student', `${s.name} and all of this student's attendance records will be permanently deleted.`)) {
+      await api(`/api/students/${s.id}`, {method: 'DELETE'}); toast('Deleted', 'ok'); load(); }
+  };
+  load();
+});
+</script></body></html>

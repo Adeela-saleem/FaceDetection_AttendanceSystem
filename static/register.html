@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Register Student</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><script src="/static/app.js"></script>
+<script>
+const PROMPTS = ['Look straight', 'Turn slightly left', 'Turn slightly right', 'Use different lighting or expression', 'Optional: change glasses or hair style'];
+initPage({title: 'Register Student', need: 'manage_students'}).then(async main => {
+  const addTo = new URLSearchParams(location.search).get('student');
+  let student = null;
+  if (addTo) {
+    student = (await api('/api/students')).students.find(s => String(s.id) === addTo);
+    if (!student) { main.innerHTML = '<div class="notice bad">Student not found.</div>'; return; }
+    $('.top h1').textContent = 'Add photos: ' + student.name;
+  }
+  const {sections} = await api('/api/sections');
+  main.innerHTML = `
+  ${!student && !sections.length ? '<div class="notice warn">No sections exist yet. First create a section on the <a href="/sections">Sections</a> page, then register a student.</div>' : ''}
+  <div class="cols">
+    <div class="card">
+      <h2>${student ? 'Add photos' : 'Student details'}</h2>
+      <div class="form ${student ? 'hidden' : ''}" style="margin-bottom:14px">
+        <div class="full"><label>Name *</label><input id="name" maxlength="80"></div>
+        <div><label>Section *</label><select id="sec"><option value="">- Select -</option>${sections.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div>
+        <div><label>Roll no (leave empty for automatic)</label><input id="roll" maxlength="30" placeholder="Assigned automatically"></div>
+      </div>
+      <p class="muted small">Take 3-5 photos: straight, slightly left/right, and with different lighting. Each photo must contain <b>one</b> face.</p>
+      <div class="toolbar"><label style="margin:0">Or upload photos</label><input type="file" id="files" accept="image/*" multiple></div>
+      <div class="thumbs" id="thumbs"></div>
+      <div class="notice hidden" id="msg" style="margin-top:14px"></div>
+      <div class="toolbar" style="margin:14px 0 0"><button class="btn" id="submit">${student ? 'Add photos' : 'Register'}</button>
+        <span class="muted small" id="count">0 photos</span></div>
+    </div>
+    <div class="card">
+      <h2>Take photo with camera</h2>
+      <div class="cam"><div class="ph" id="ph">The camera is off.</div><video id="v" autoplay muted playsinline></video></div>
+      <div class="toolbar" style="margin:12px 0 0"><button class="btn" id="start">Start camera</button>
+        <button class="btn hidden" id="snap">📸 Capture</button><button class="btn ghost hidden" id="stop">Stop</button></div>
+      <div class="notice hidden" id="camMsg" style="margin:12px 0 0"></div>
+    </div>
+  </div>`;
+
+  const photos = [], v = $('#v'); let stream = null;
+  const note = (el, text, kind = '') => { el.className = 'notice ' + kind; el.textContent = text; };
+  function render() {
+    $('#thumbs').innerHTML = photos.map((p, i) => `<div><img src="${p}"><button data-i="${i}" title="Remove">×</button></div>`).join('');
+    $('#count').textContent = `${photos.length} photo${photos.length === 1 ? '' : 's'}`;
+    if (stream) $('#ph').textContent = '';
+    $('#snap').textContent = photos.length < 10 ? `📸 Capture (${PROMPTS[Math.min(photos.length, PROMPTS.length - 1)]})` : 'Max 10 photos';
+    $('#snap').disabled = photos.length >= 10;
+  }
+  $('#thumbs').onclick = e => { if (e.target.dataset.i) { photos.splice(+e.target.dataset.i, 1); render(); } };
+  $('#files').onchange = async e => {
+    for (const f of e.target.files) {
+      if (photos.length >= 10) break;
+      try { photos.push(await fileToDataURL(f, 1000)); } catch (x) { toast(x.message, 'bad'); }
+    }
+    e.target.value = ''; render();
+  };
+
+  $('#start').onclick = async () => {
+    $('#start').disabled = true; note($('#camMsg'), 'Starting the camera... If a browser prompt appears, allow camera access.');
+    try { stream = await startCamera(v); } catch (e) { note($('#camMsg'), e.message, 'bad'); $('#start').disabled = false; return; }
+    $('#camMsg').classList.add('hidden'); $('#ph').classList.add('hidden');
+    $('#start').classList.add('hidden'); $('#snap').classList.remove('hidden'); $('#stop').classList.remove('hidden'); render();
+  };
+  const stop = () => { stopCamera(stream, v); stream = null; $('#ph').classList.remove('hidden'); $('#ph').textContent = 'The camera is off.';
+    $('#start').classList.remove('hidden'); $('#start').disabled = false; $('#snap').classList.add('hidden'); $('#stop').classList.add('hidden'); };
+  $('#stop').onclick = stop; addEventListener('pagehide', stop);
+  $('#snap').onclick = () => { if (photos.length < 10) { photos.push(captureFrame(v, 800, 0.9)); render(); } };
+
+  $('#submit').onclick = async () => {
+    const msg = $('#msg');
+    if (!student && !$('#name').value.trim()) return note(msg, 'Enter a name.', 'bad');
+    if (!student && !$('#sec').value) return note(msg, 'Select a section.', 'bad');
+    if (!photos.length) return note(msg, 'Add at least 1 photo.', 'bad');
+    $('#submit').disabled = true; note(msg, 'Processing photos...');
+    try {
+      const r = student
+        ? await api(`/api/students/${student.id}/photos`, {method: 'POST', body: {images: photos}})
+        : await api('/api/students/register', {method: 'POST', body: {name: $('#name').value, roll_no: $('#roll').value,
+            section_id: +$('#sec').value, images: photos}});
+      const bad = r.results.filter(x => !x.ok).map(x => `Photo ${x.photo}: ${x.error}`);
+      let text = `${r.added} photo(s) added.` + (r.added < 3 ? ' 3 or more photos improve accuracy.' : '');
+      if (bad.length) text += ' Skipped -> ' + bad.join('; ');
+      if (r.possible_duplicate) text += ` ⚠ This face matches "${r.possible_duplicate}" - possible duplicate registration.`;
+      note(msg, text, r.possible_duplicate || bad.length ? 'warn' : 'ok');
+      photos.length = 0; render();
+      if (!student) { $('#name').value = $('#roll').value = ''; text += ` Roll no: ${r.student.roll_no || '-'}.`; note(msg, text, r.possible_duplicate || bad.length ? 'warn' : 'ok'); }
+    } catch (e) { note(msg, e.message, 'bad'); }
+    $('#submit').disabled = false;
+  };
+  render();
+});
+</script></body></html>

@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+attendance.db
+Known_Faces/
+avatars/
+venv/
+*.log

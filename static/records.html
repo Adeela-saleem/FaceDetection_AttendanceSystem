@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Records</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><script src="/static/app.js"></script>
+<script>
+initPage({title: 'Attendance Records'}).then(async main => {
+  const edit = ME.can.edit_attendance, ago = new Date(Date.now() - 30 * 864e5);
+  const d30 = new Date(ago - ago.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  // The server already limits this to the sections the logged-in teacher is assigned to (all sections for Admin),
+  // including teachers with several sections, so one call is enough.
+  const {students, classes} = await api('/api/students');
+  const studentLabel = s => s.class_name ? `${s.name} (${s.class_name})` : s.name;
+  main.innerHTML = `<div class="card">
+    <div class="toolbar">
+      <div><label>From</label><input type="date" id="start" value="${d30}"></div>
+      <div><label>To</label><input type="date" id="end" value="${todayStr()}"></div>
+      <div><label>Student</label><select id="sid"><option value="">All</option>${students.map(s => `<option value="${s.id}">${esc(studentLabel(s))}</option>`).join('')}</select></div>
+      <div><label>Section</label><select id="cls"><option value="">All</option>${classes.map(c => `<option>${esc(c)}</option>`).join('')}</select></div>
+      <div><label>Status</label><select id="st"><option value="">All</option><option value="present">Present</option></select></div>
+      <span class="right"></span>
+      ${edit ? '<button class="btn ghost" id="manual">+ Manual entry</button>' : ''}
+      <a class="btn" id="csv" style="text-decoration:none">⬇ Download CSV</a></div>
+    <div class="small muted" id="count" style="margin-bottom:8px"></div>
+    <div class="tablewrap" id="tbl"></div></div>`;
+  const qs = () => new URLSearchParams({start: $('#start').value, end: $('#end').value, student_id: $('#sid').value || 0,
+    class_name: $('#cls').value, status: $('#st').value}).toString();
+  async function load() {
+    const {records} = await api('/api/attendance?' + qs());
+    $('#csv').href = '/api/attendance/export.csv?' + qs();
+    $('#count').textContent = `${records.length} record${records.length === 1 ? '' : 's'}` + (records.length > 500 ? ' (the first 500 are displayed here; the full list is available in CSV)' : '');
+    $('#tbl').innerHTML = records.length ? `<table><tr><th>Name</th><th>Roll no</th><th>Section</th><th>Date</th><th>Time</th><th>Status</th>${edit ? '<th></th>' : ''}</tr>${
+      records.slice(0, 500).map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.roll_no || '-')}</td><td>${esc(r.class_name || '-')}</td><td>${r.date}</td><td>${r.time}</td><td>${statusBadge(r.status)}</td>
+        ${edit && (ME.role !== 'teacher' || r.teacher_id === ME.id) ? `<td class="act"><button class="btn danger sm" data-id="${r.id}">Delete</button></td>` : (edit ? '<td></td>' : '')}</tr>`).join('')}</table>`
+      : '<div class="empty">No records found in this range.</div>';
+  }
+  ['start', 'end', 'sid', 'cls', 'st'].forEach(id => $('#' + id).onchange = load);
+  $('#tbl').onclick = async e => {
+    const b = e.target.closest('button[data-id]');
+    if (b && await confirmBox('Delete record', 'Delete this attendance record?')) { await api(`/api/attendance/${b.dataset.id}`, {method: 'DELETE'}); load(); }
+  };
+  if (edit) $('#manual').onclick = () => dialog({title: 'Manual attendance', html: students.length ? `
+      <div><label>Student</label><select name="student_id" required>${students.map(s => `<option value="${s.id}">${esc(studentLabel(s))}</option>`).join('')}</select></div>
+      <div><label>Date</label><input type="date" name="day" value="${todayStr()}" required></div>
+      <div><label>Time</label><input type="time" name="at" value="${new Date().toTimeString().slice(0,5)}" required></div>
+      <div><label>Status</label><select name="status"><option value="present">Present</option></select></div>`
+      : '<p class="full muted" style="margin:0">There are no students in the sections assigned to you yet. Ask an admin to assign a section.</p>',
+    onSubmit: async f => {
+      if (!students.length) throw new Error('No students available for manual attendance.');
+      const v = Object.fromEntries(new FormData(f)); v.student_id = +v.student_id;
+      await api('/api/attendance/manual', {method: 'POST', body: v}); toast('Attendance marked', 'ok'); load(); }});
+  load();
+});
+</script></body></html>

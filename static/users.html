@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Users</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><script src="/static/app.js"></script>
+<script>
+const LABEL = {admin: 'Admin', teacher: 'Teacher'};
+/** Success message built from what the server actually saved (not a fixed "success" text). */
+function notifySaved(verb, saved, requestedSectionCount) {
+  if (saved.role !== 'teacher') return toast(`${saved.role_label} "${saved.username}" ${verb}.`, 'ok');
+  const n = saved.sections.length, who = `Teacher "${saved.username}"`;
+  if (requestedSectionCount != null && n !== requestedSectionCount)
+    return toast(`${who} was ${verb}, but only ${n} of ${requestedSectionCount} selected sections were saved. Please open Edit and check the sections.`, 'bad');
+  if (!n) return toast(`${who} was ${verb}, but has NO section assigned. They cannot see students or take attendance until you assign a section.`, 'warn');
+  toast(`${who} ${verb}. Assigned to ${n} section${n === 1 ? '' : 's'}: ${saved.sections.join(', ')}.`, 'ok');
+}
+const roleOpts = (roles, sel) => roles.map(r => `<option value="${r}" ${r === sel ? 'selected' : ''}>${LABEL[r]}</option>`).join('');
+initPage({title: 'Users', need: 'manage_users'}).then(main => {
+  main.innerHTML = `<div class="card">
+    <div class="toolbar">
+      <button class="btn right" id="add">➕ Add User</button>
+    </div>
+    <div class="tablewrap" id="tbl"></div>
+  </div>`;
+
+  let users = [], roles = [], sections = [];
+  async function load() {
+    const d = await api('/api/users');
+    sections = (await api('/api/sections')).sections;
+    users = d.users; roles = d.assignable_roles;
+    document.getElementById('tbl').innerHTML = `<table>
+      <tr><th>Name</th><th>Username</th><th>Role</th><th>Access</th><th>Status</th><th>Last Login</th><th></th></tr>
+      ${users.map(u => `<tr>
+        <td>${esc(u.full_name)}${u.id === ME.id ? ' <span class="badge brand">You</span>' : ''}</td>
+        <td>${esc(u.username)}</td>
+        <td><span class="badge brand">${esc(u.role_label)}</span></td>
+        <td class="wrap small">${
+          u.role === 'teacher'
+            ? (u.sections.length
+                ? u.sections.map(x => `<span class="badge">${esc(x)}</span>`).join(' ')
+                : '<span class="badge warn">No section assigned</span>')
+            : 'All sections (manage)'
+        }</td>
+        <td>${u.active ? '<span class="badge ok">Active</span>' : '<span class="badge bad">Disabled</span>'}</td>
+        <td class="muted small">${u.last_login ? u.last_login.replace('T', ' ') : 'Never'}</td>
+        <td class="act">${u.manageable ? `
+          <button class="btn ghost sm" data-a="edit" data-id="${u.id}">Edit</button>
+          <button class="btn ghost sm" data-a="pw" data-id="${u.id}">Reset Password</button>
+          <button class="btn danger sm" data-a="del" data-id="${u.id}">Delete</button>` : ''}
+        </td>
+      </tr>`).join('')}
+    </table>`;
+  }
+
+  document.getElementById('add').onclick = () => dialog({title: 'Add User', submit: 'Create', html: `
+    <div><label>Full Name</label><input name="full_name" required maxlength="80"></div>
+    <div><label>Username</label><input name="username" required minlength="3" maxlength="40" pattern="[A-Za-z0-9_.\\-]+" autocomplete="off" placeholder="letters, numbers, _ . -"></div>
+    <div><label>Role</label><select name="role">${roleOpts(roles, 'teacher')}</select></div>
+    <div><label>Temporary Password (min 8 chars)</label><input name="password" type="password" required minlength="8" autocomplete="new-password"></div>
+    <div class="full"><label>Assigned sections</label><div class="checks">${sections.map(s => `<label><input type="checkbox" name="section_ids" value="${s.id}"> ${esc(s.name)}</label>`).join('')}</div></div>`,
+    onSubmit: async f => {
+      const fd = new FormData(f);
+      const v = Object.fromEntries(fd);
+      v.section_ids = fd.getAll('section_ids').map(Number);
+      const saved = await api('/api/users', {method: 'POST', body: v});
+      notifySaved('created', saved, v.role === 'teacher' ? new Set(v.section_ids).size : null);
+      await load();
+    }});
+
+  document.getElementById('tbl').onclick = async e => {
+    const b = e.target.closest('button[data-a]'); if (!b) return;
+    const u = users.find(x => x.id == b.dataset.id);
+    if (b.dataset.a === 'edit') dialog({title: 'Edit — ' + u.username, html: `
+      <div><label>Full Name</label><input name="full_name" value="${esc(u.full_name)}" required maxlength="80"></div>
+      <div><label>Role</label><select name="role">${roleOpts(roles, u.role)}</select></div>
+      <div><label>Status</label><select name="active">
+        <option value="1" ${u.active ? 'selected' : ''}>Active</option>
+        <option value="0" ${u.active ? '' : 'selected'}>Disabled</option>
+      </select></div>
+      <div class="full"><label>Assigned sections</label><div class="checks">${sections.map(s => `<label><input type="checkbox" name="section_ids" value="${s.id}" ${u.sections.includes(s.name)?'checked':''}> ${esc(s.name)}</label>`).join('')}</div></div>`,
+      onSubmit: async f => {
+        const fd = new FormData(f);
+        const v = Object.fromEntries(fd); v.active = v.active === '1';
+        v.section_ids = fd.getAll('section_ids').map(Number);
+        const saved = await api(`/api/users/${u.id}`, {method: 'PATCH', body: v});
+        notifySaved(saved.active ? 'updated' : 'updated and disabled', saved, saved.role === 'teacher' ? new Set(v.section_ids).size : null);
+        await load();
+      }});
+
+    if (b.dataset.a === 'pw') dialog({title: 'Reset Password — ' + u.username, submit: 'Reset', html: `
+      <div><label>New Password (min 8 chars)</label><input name="password" type="password" required minlength="8" autocomplete="new-password"></div>
+      <p class="muted small full" style="margin:0">All active sessions for this user will be logged out.</p>`,
+      onSubmit: async f => {
+        await api(`/api/users/${u.id}/reset-password`, {method: 'POST', body: Object.fromEntries(new FormData(f))});
+        toast('Password reset successfully', 'ok');
+      }});
+
+    if (b.dataset.a === 'del' && await confirmBox('Delete User', `The account "${u.username}" will be permanently deleted.`)) {
+      await api(`/api/users/${u.id}`, {method: 'DELETE'}); toast('User deleted', 'ok'); load();
+    }
+  };
+  load();
+});
+</script></body></html>

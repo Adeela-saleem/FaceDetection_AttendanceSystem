@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Login · Face Attendance</title><link rel="stylesheet" href="/static/style.css"></head>
+<body class="auth"><div class="card">
+  <h1>🎓 <span id="inst">Face Attendance</span></h1>
+  <p class="muted" id="sub">Log in to your account.</p>
+  <div class="notice bad hidden" id="err"></div>
+  <form id="f" class="form">
+    <div><label>Username</label><input name="username" autocomplete="username" required autofocus></div>
+    <div class="hidden" id="nameRow"><label>Full name</label><input name="full_name" autocomplete="name"></div>
+    <div><label>Password</label><input name="password" type="password" autocomplete="current-password" required></div>
+    <div class="hidden" id="pw2Row"><label>Confirm password</label><input name="password2" type="password" autocomplete="new-password"></div>
+    <button class="btn" id="go">Login</button>
+  </form>
+  <p class="small muted" style="text-align:center;margin:16px 0 0"><a href="/">← Back to home</a></p>
+</div>
+<script src="/static/app.js"></script>
+<script>
+(async () => {
+  let setup = false;
+  try { await api('/api/auth/me', {noRedirect: true}); location.href = '/'; return; } catch {}
+  setup = (await api('/api/auth/state', {noRedirect: true})).setup_needed;
+  if (setup) {
+    $('#sub').textContent = 'First-time setup: create the Admin account (password: minimum 8 characters).';
+    $('#nameRow').classList.remove('hidden'); $('#pw2Row').classList.remove('hidden');
+    $('[name=full_name]').required = $('[name=password2]').required = true;
+    $('[name=password]').autocomplete = 'new-password'; $('#go').textContent = 'Create Admin';
+  }
+  $('#f').onsubmit = async e => {
+    e.preventDefault(); const f = e.target, v = Object.fromEntries(new FormData(f)); $('#err').classList.add('hidden');
+    try {
+      if (setup && v.password !== v.password2) throw new Error('The passwords do not match');
+      await api(setup ? '/api/auth/setup' : '/api/auth/login', {method: 'POST', noRedirect: true,
+        body: setup ? {username: v.username, full_name: v.full_name, password: v.password}
+                    : {username: v.username, password: v.password}});
+      location.href = '/';
+    } catch (x) { $('#err').textContent = x.message; $('#err').classList.remove('hidden'); }
+  };
+})();
+</script></body></html>

@@ -1,0 +1,125 @@
+/* Landing page only. Reuses the colour tokens, fonts, .btn and .badge from style.css. */
+.lp{background:var(--bg)}
+.lp a{color:inherit}
+.lp a.btn{display:inline-block;text-decoration:none;text-align:center}
+.lp .wrap{width:min(1120px,100% - 40px);margin-inline:auto}
+.skip{position:absolute;left:-999px;top:8px;background:#fff;color:var(--ink);padding:8px 14px;border-radius:9px;z-index:100}
+.skip:focus{left:8px}
+.lp :focus-visible{outline:3px solid #a5b4fc;outline-offset:2px}
+
+/* ---------- top bar ---------- */
+.lp-nav{position:sticky;top:0;z-index:30;background:#1e1b4bee;backdrop-filter:blur(8px);color:#e0e7ff}
+.lp-nav .wrap{display:flex;align-items:center;gap:22px;min-height:62px}
+.lp-brand{display:flex;gap:8px;align-items:center;font-weight:700;font-size:1.1rem;color:#fff;text-decoration:none}
+.lp-links{display:flex;gap:6px;margin-left:auto;align-items:center}
+.lp-links a{padding:8px 12px;border-radius:9px;text-decoration:none;color:#c7d2fe;font-size:.93rem}
+.lp-links a:hover{background:#312e81;color:#fff}
+.lp-links a.btn{color:var(--brand);margin-left:6px}
+
+/* ---------- buttons on dark backgrounds ---------- */
+.btn-light{background:#fff;color:var(--brand)!important;border-color:#fff}
+.btn-light:hover{background:#e0e7ff}
+.btn-outline{background:transparent;color:#fff!important;border-color:#a5b4fc}
+.btn-outline:hover{background:#ffffff1f}
+.btn-lg{padding:12px 24px;font-size:1.02rem;border-radius:11px}
+
+/* ---------- hero ---------- */
+.hero{background:linear-gradient(135deg,#312e81,#0f172a);color:#fff;padding:64px 0 72px}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:44px;align-items:center}
+.eyebrow{display:inline-block;background:#4f46e533;border:1px solid #6366f1;color:#c7d2fe;border-radius:99px;padding:4px 14px;font-size:.82rem;font-weight:600;margin-bottom:16px}
+.hero h1{font-size:clamp(2rem,4.4vw,3.2rem);line-height:1.12;margin:0 0 16px;letter-spacing:-.02em}
+.hero h1 em{font-style:normal;color:#a5b4fc}
+.hero p.lead{font-size:1.1rem;color:#c7d2fe;max-width:36em;margin:0 0 28px}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap}
+.trust{display:flex;gap:18px;flex-wrap:wrap;margin:26px 0 0;padding:0;list-style:none;color:#a5b4fc;font-size:.88rem}
+.trust li::before{content:"✓ ";color:#86efac;font-weight:700}
+
+/* hero preview (static sample, not live data) */
+.preview{background:#fff;color:var(--ink);border-radius:16px;padding:18px;box-shadow:0 24px 60px #0006}
+.preview .pv-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.preview .pv-top b{font-size:.95rem}
+.pv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.pv-stats div{background:#f1f5f9;border-radius:10px;padding:10px;text-align:center}
+.pv-stats strong{display:block;font-size:1.5rem}
+.pv-stats span{font-size:.75rem;color:var(--muted)}
+.pv-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:.88rem}
+.pv-bar{grid-column:1/-1;height:8px;border-radius:99px;background:#e2e8f0;overflow:hidden}
+.pv-bar i{display:block;height:100%;border-radius:99px}
+.pv-note{font-size:.72rem;color:var(--muted);margin:10px 0 0;text-align:center}
+
+/* ---------- generic sections ---------- */
+.sec{padding:72px 0}
+.sec.alt{background:#fff;border-block:1px solid var(--line)}
+.sec-head{text-align:center;max-width:42em;margin:0 auto 38px}
+.sec-head h2{font-size:clamp(1.5rem,3vw,2.1rem);letter-spacing:-.01em;margin-bottom:10px}
+.sec-head p{color:var(--muted);margin:0;font-size:1.02rem}
+
+.grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;transition:transform .15s,box-shadow .15s}
+.feat:hover{transform:translateY(-3px);box-shadow:0 12px 30px #4f46e51f}
+.feat .ic{width:44px;height:44px;border-radius:11px;background:#e0e7ff;display:grid;place-items:center;font-size:1.4rem;margin-bottom:12px}
+.feat h3{font-size:1.05rem;margin-bottom:6px}
+.feat p{margin:0;color:var(--muted);font-size:.93rem}
+
+.steps{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));counter-reset:step;padding:0;margin:0;list-style:none}
+.steps li{counter-increment:step;background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:22px 22px 22px 22px;position:relative}
+.steps li::before{content:counter(step);display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--brand);color:#fff;font-weight:700;margin-bottom:10px}
+.steps h3{font-size:1.02rem}.steps p{margin:0;color:var(--muted);font-size:.93rem}
+
+/* roles */
+.roles-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
+.roles{width:100%;border-collapse:collapse;min-width:520px}
+.roles th,.roles td{padding:12px 16px;border-bottom:1px solid var(--line);text-align:left;white-space:normal}
+.roles th{font-size:.78rem}
+.roles td:not(:first-child),.roles th:not(:first-child){text-align:center;width:24%}
+.roles tr:last-child td{border-bottom:0}
+.yes{color:var(--ok);font-weight:700}.no{color:#94a3b8}
+
+/* ---------- demo ---------- */
+.demo-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;display:grid;grid-template-columns:1.15fr .85fr;gap:22px;box-shadow:0 14px 40px #4f46e512}
+.demo-cam{position:relative;background:#0f172a;border-radius:var(--r);aspect-ratio:4/3;overflow:hidden;display:grid;place-items:center;color:#94a3b8;text-align:center}
+.demo-cam .ph{padding:20px;font-size:.92rem}
+.demo-people{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:10px;padding:14px}
+.dp{position:relative;display:grid;place-items:center}
+.dp .face{width:56%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#475569,#1e293b);border:2px solid transparent;transition:border-color .2s,box-shadow .2s}
+.dp .tag{position:absolute;bottom:4%;left:50%;transform:translateX(-50%);font-size:.7rem;font-weight:600;padding:2px 8px;border-radius:6px;background:#334155;color:#e2e8f0;white-space:nowrap}
+.dp.scan .face{border-color:var(--warn);box-shadow:0 0 0 4px #d9770633}
+.dp.scan .tag{background:var(--warn);color:#fff}
+.dp.done .face{border-color:var(--ok);box-shadow:0 0 0 4px #16a34a33}
+.dp.done .tag{background:var(--ok);color:#fff}
+.demo-cam.idle .demo-people{opacity:.25}
+.demo-side h3{font-size:1rem;margin-bottom:10px}
+.demo-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.demo-stats div{background:var(--bg);border-radius:10px;padding:8px;text-align:center}
+.demo-stats strong{display:block;font-size:1.35rem}.demo-stats span{font-size:.72rem;color:var(--muted)}
+.demo-log{list-style:none;margin:0 0 14px;padding:0;max-height:252px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.demo-log li{display:flex;justify-content:space-between;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:.88rem}
+.demo-log li:last-child{border-bottom:0}.demo-log li.empty{color:var(--muted);justify-content:center}
+.demo-actions{display:flex;gap:10px;flex-wrap:wrap}
+.demo-note{margin:14px 0 0;font-size:.8rem;color:var(--muted);text-align:center}
+
+/* ---------- final call-to-action + footer ---------- */
+.final{background:linear-gradient(135deg,#312e81,#0f172a);color:#fff;text-align:center;padding:60px 0}
+.final h2{font-size:clamp(1.5rem,3vw,2rem);margin-bottom:8px}
+.final p{color:#c7d2fe;margin:0 0 24px}
+.final .cta-row{justify-content:center}
+.lp-foot{background:#0b1020;color:#94a3b8;text-align:center;padding:22px 0;font-size:.85rem}
+
+/* ---------- responsive ---------- */
+@media(max-width:900px){
+  .hero{padding:44px 0 52px}
+  .hero .wrap{grid-template-columns:1fr;gap:32px}
+  .demo-card{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  .lp-links a:not(.btn){display:none}
+  .sec{padding:52px 0}
+  .cta-row .btn{flex:1 1 100%}
+  .demo-actions .btn{flex:1 1 100%}
+}
+@media(prefers-reduced-motion:reduce){
+  .feat,.dp .face{transition:none}.feat:hover{transform:none}
+  html{scroll-behavior:auto}
+}
+html{scroll-behavior:smooth}
+section[id]{scroll-margin-top:70px}

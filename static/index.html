@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><script src="/static/app.js"></script>
+<script>
+initPage({title: 'Dashboard'}).then(main => {
+  main.innerHTML = `
+    <div class="stats" id="stats"></div>
+    <div class="card" id="secCard">
+      <div class="sec-header"><h2>Sections — Today's Attendance</h2><span class="muted small" id="dateLabel"></span></div>
+      <div id="secs"></div>
+    </div>
+    <div class="card">
+      <h2>Last 14 Days — Present Count</h2>
+      <div class="bars" id="bars"></div>
+    </div>
+    <div class="cols">
+      <div class="card"><h2>✅ Present Today</h2><div class="tablewrap" id="pres"></div></div>
+      <div class="card"><h2>❌ Absent Today</h2><div class="tablewrap" id="abs"></div></div>
+    </div>`;
+
+  document.getElementById('dateLabel').textContent = new Date().toLocaleDateString('en-PK', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+  async function load() {
+    const d = await api('/api/dashboard');
+
+    // Top stats — no "Late" card
+    const stats = [
+      {label: 'Registered', val: d.total, icon: '👩‍🎓', color: ''},
+      {label: 'Present Today', val: d.present, icon: '✅', color: 'ok'},
+      {label: 'Absent Today', val: d.absent, icon: '❌', color: 'bad'},
+      {label: 'Attendance Rate', val: d.rate + '%', icon: '📊', color: d.rate >= 80 ? 'ok' : d.rate >= 50 ? 'warn' : 'bad'},
+    ];
+    document.getElementById('stats').innerHTML = stats.map(s => `
+      <div class="stat stat-${s.color}">
+        <div class="stat-icon">${s.icon}</div>
+        <div class="n">${s.val}</div>
+        <div class="l">${s.label}</div>
+      </div>`).join('');
+
+    // Section-wise table with progress bar
+    if (d.sections.length) {
+      document.getElementById('secs').innerHTML = d.sections.map(s => {
+        const pct = s.rate;
+        const color = pct >= 80 ? 'var(--ok)' : pct >= 50 ? 'var(--warn)' : 'var(--bad)';
+        return `<div class="sec-row">
+          <div class="sec-info">
+            <span class="sec-name">${esc(s.name)}</span>
+            <span class="muted small">${s.class_start && s.class_end ? s.class_start+'–'+s.class_end : 'No class time'}</span>
+          </div>
+          <div class="sec-counts">
+            <span class="badge ok">${s.present} present</span>
+            <span class="badge bad">${s.absent} absent</span>
+          </div>
+          <div class="sec-bar-wrap">
+            <div class="sec-bar" style="width:${pct}%;background:${color}"></div>
+            <span class="sec-pct">${pct}%</span>
+          </div>
+        </div>`;
+      }).join('');
+    } else {
+      document.getElementById('secs').innerHTML = `<div class="empty">${d.no_sections ? 'No section has been assigned to you yet. Please contact the admin.' : 'No sections created yet. Add one on the Sections page.'}</div>`;
+    }
+
+    // Bar chart
+    const max = Math.max(1, ...d.series.map(s => s.present));
+    document.getElementById('bars').innerHTML = d.series.map(s => {
+      const h = Math.round(s.present / max * 100);
+      return `<div title="${s.date}: ${s.present} present"><b>${s.present}</b><i style="height:${h}px"></i>${s.date.slice(8)}/${s.date.slice(5,7)}</div>`;
+    }).join('');
+
+    // Present list
+    document.getElementById('pres').innerHTML = d.present_list.length
+      ? `<table><tr><th>Name</th><th>Roll no</th><th>Section</th><th>Time</th></tr>${
+          d.present_list.map(r => `<tr>
+            <td>${esc(r.name)}</td>
+            <td>${esc(r.roll_no || '-')}</td>
+            <td>${esc(r.class_name || '-')}</td>
+            <td>${r.time.slice(0,5)}</td>
+          </tr>`).join('')}</table>`
+      : '<div class="empty">No attendance has been marked yet today.</div>';
+
+    // Absent list
+    document.getElementById('abs').innerHTML = d.absent_list.length
+      ? `<table><tr><th>Name</th><th>Roll no</th><th>Section</th></tr>${
+          d.absent_list.map(r => `<tr>
+            <td>${esc(r.name)}</td>
+            <td>${esc(r.roll_no || '-')}</td>
+            <td>${esc(r.class_name || '-')}</td>
+          </tr>`).join('')}</table>`
+      : `<div class="empty">${d.total ? '🎉 Everyone is present!' : 'No students registered yet.'}</div>`;
+  }
+  load(); setInterval(load, 30000);
+});
+</script></body></html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sections</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><script src="/static/app.js"></script>
+<script>
+initPage({title: 'Sections'}).then(main => {
+  const can = ME.can.manage_sections;
+  main.innerHTML = `<div class="card">
+    <div class="toolbar">
+      ${can ? '<button class="btn right" id="add">➕ Add Section</button>' : ''}
+    </div>
+    <div class="tablewrap" id="tbl"></div></div>`;
+
+  let secs = [], teachers = [];
+
+  const form = s => `
+    <div><label>Section name *</label><input name="name" value="${esc(s.name||'')}" required maxlength="80" placeholder="e.g. BSCS-6A, 10-A, CS-2024"></div>
+    <div class="form" style="grid-template-columns:1fr 1fr">
+      <div><label>Class start time</label><input name="class_start" type="time" value="${esc(s.class_start||'')}"></div>
+      <div><label>Class end time</label><input name="class_end" type="time" value="${esc(s.class_end||'')}"></div>
+    </div>
+    <div><label>Teachers (who can take attendance for this section)</label>
+      <div class="checks">${teachers.length
+        ? teachers.map(t => `<label><input type="checkbox" name="teacher_ids" value="${t.id}" ${(s.teachers||[]).some(x=>x.id===t.id)?'checked':''}> ${esc(t.full_name)} <span class="muted">@${esc(t.username)}</span></label>`).join('')
+        : '<span class="muted small">First create a Teacher on the Users page.</span>'
+      }</div>
+    </div>`;
+
+  const bodyFromForm = f => {
+    const fd = new FormData(f);
+    return {name: fd.get('name'), class_start: fd.get('class_start'), class_end: fd.get('class_end'),
+            late_after_min: 10, teacher_ids: fd.getAll('teacher_ids').map(Number)};
+  };
+
+  async function load() {
+    const d = await api('/api/sections');
+    secs = d.sections; teachers = d.teachers || [];
+    if (!secs.length) {
+      document.getElementById('tbl').innerHTML = `<div class="empty">${
+        ME.role === 'teacher' ? 'No section has been assigned to you. Contact an admin.'
+        : 'No sections yet. Use "Add Section" to create one.'}</div>`;
+      return;
+    }
+    document.getElementById('tbl').innerHTML = `<table>
+      <tr><th>Section</th><th>Class Time</th><th>Students</th><th>Teachers</th>${can?'<th></th>':''}</tr>
+      ${secs.map(s => `<tr>
+        <td><b>${esc(s.name)}</b></td>
+        <td>${s.class_start && s.class_end ? `<span class="badge brand">${s.class_start}–${s.class_end}</span>` : '<span class="muted small">Not set</span>'}</td>
+        <td><a href="/students?section=${s.id}">${s.n_students} students</a></td>
+        <td class="wrap">${s.teachers.length
+          ? s.teachers.map(t => `<span class="badge brand">${esc(t.full_name)}</span>`).join(' ')
+          : '<span class="muted small">—</span>'}</td>
+        ${can ? `<td class="act">
+          <button class="btn ghost sm" data-a="edit" data-id="${s.id}">Edit</button>
+          <button class="btn danger sm" data-a="del" data-id="${s.id}">Delete</button>
+        </td>` : ''}
+      </tr>`).join('')}
+    </table>`;
+  }
+
+  if (can) {
+    document.getElementById('add').onclick = () => dialog({title:'Add Section', submit:'Create', html: form({late_after_min:10}),
+      onSubmit: async f => { await api('/api/sections', {method:'POST', body: bodyFromForm(f)}); toast('Section created ✅', 'ok'); load(); }});
+    document.getElementById('tbl').addEventListener('click', async e => {
+      const b = e.target.closest('button[data-a]'); if (!b) return;
+      const s = secs.find(x => x.id == b.dataset.id);
+      if (b.dataset.a === 'edit')
+        dialog({title: 'Edit — ' + s.name, html: form(s),
+          onSubmit: async f => { await api(`/api/sections/${s.id}`, {method:'PUT', body: bodyFromForm(f)}); toast('Saved ✅', 'ok'); load(); }});
+      if (b.dataset.a === 'del' && await confirmBox('Delete section', `${s.name} will be deleted. Its ${s.n_students} student(s) will become unassigned.`)) {
+        await api(`/api/sections/${s.id}`, {method:'DELETE'}); toast('Deleted', 'ok'); load(); }
+    });
+  }
+  load();
+});
+</script></body></html>

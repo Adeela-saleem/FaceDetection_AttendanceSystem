@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Face Attendance · Smart attendance with face recognition</title>
+<meta name="description" content="Face Attendance marks class attendance automatically from a browser camera or a class photo. Sections, class timings, Admin and Teacher roles, records and CSV export.">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/landing.css">
+</head>
+<body class="lp">
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="lp-nav">
+  <div class="wrap">
+    <a class="lp-brand" href="/" aria-label="Face Attendance home">🎓 <span>Face Attendance</span></a>
+    <nav class="lp-links" aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#roles">Roles</a>
+      <a href="#demo">Demo</a>
+      <a class="btn btn-light" href="/login">Login</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <!-- ================= HERO ================= -->
+  <section class="hero" aria-labelledby="h-hero">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow">Attendance Management System</span>
+        <h1 id="h-hero">Take attendance with a <em>glance at the camera</em></h1>
+        <p class="lead">Register each student once with a few photos. After that, attendance is marked automatically from the browser camera or a class photo, organised by section and class time, with separate access for Admins and Teachers.</p>
+        <div class="cta-row">
+          <a class="btn btn-light btn-lg" href="/login">Login</a>
+          <a class="btn btn-outline btn-lg" href="#demo" id="tryDemo">▶ Try Demo</a>
+        </div>
+        <ul class="trust">
+          <li>Works in the browser</li>
+          <li>Section-wise access for teachers</li>
+          <li>CSV export</li>
+        </ul>
+      </div>
+
+      <div class="preview" role="img" aria-label="Sample dashboard preview with example numbers">
+        <div class="pv-top"><b>📊 Today's attendance</b><span class="badge brand">Sample</span></div>
+        <div class="pv-stats">
+          <div><strong>28</strong><span>Present</span></div>
+          <div><strong style="color:var(--bad)">4</strong><span>Absent</span></div>
+          <div><strong style="color:var(--ok)">88%</strong><span>Rate</span></div>
+        </div>
+        <div class="pv-row"><span><b>CS-A</b> <span class="muted small">09:00–10:15</span></span><span class="badge ok">15 present</span>
+          <div class="pv-bar"><i style="width:94%;background:var(--ok)"></i></div></div>
+        <div class="pv-row"><span><b>SE-A</b> <span class="muted small">11:00–12:15</span></span><span class="badge ok">13 present</span>
+          <div class="pv-bar"><i style="width:81%;background:var(--ok)"></i></div></div>
+        <div class="pv-row"><span><b>BBA-B</b> <span class="muted small">Time not set</span></span><span class="badge warn">Waiting</span>
+          <div class="pv-bar"><i style="width:0"></i></div></div>
+        <p class="pv-note">Illustration with example numbers, not real data.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FEATURES ================= -->
+  <section class="sec" id="features" aria-labelledby="h-feat">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2 id="h-feat">Everything needed for daily attendance</h2>
+        <p>Built for institutes that want accurate attendance without paper registers or manual roll calls.</p>
+      </div>
+      <div class="grid">
+        <article class="feat"><div class="ic" aria-hidden="true">📷</div><h3>Face-recognition attendance</h3>
+          <p>Use the live browser camera or upload a class photo. Every recognised face is matched to a registered student. In live mode the same face must be confirmed in several scans in a row before it is saved.</p></article>
+        <article class="feat"><div class="ic" aria-hidden="true">🏫</div><h3>Sections &amp; class timings</h3>
+          <p>Group students into sections with a class start and end time. Attendance opens shortly before class begins and closes when it ends, so late scans are not saved by mistake.</p></article>
+        <article class="feat"><div class="ic" aria-hidden="true">🔐</div><h3>Admin &amp; Teacher roles</h3>
+          <p>Admins manage everything. Teachers see students and records only for the sections assigned to them, and can remove only the attendance they created.</p></article>
+        <article class="feat"><div class="ic" aria-hidden="true">🗂</div><h3>Records &amp; CSV export</h3>
+          <p>Filter attendance by date, student and section, add a manual entry when needed, and download the result as a CSV file for reports.</p></article>
+        <article class="feat"><div class="ic" aria-hidden="true">📊</div><h3>Live dashboard</h3>
+          <p>See who is present and absent today, section-wise progress, and a 14-day trend at a glance.</p></article>
+        <article class="feat"><div class="ic" aria-hidden="true">🛡</div><h3>Secure by design</h3>
+          <p>Hashed passwords, protected sessions, login attempt limits, permission checks on every request and an activity log for admins.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= HOW IT WORKS ================= -->
+  <section class="sec alt" id="how" aria-labelledby="h-how">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2 id="h-how">How it works</h2>
+        <p>Three simple steps from setup to daily use.</p>
+      </div>
+      <ol class="steps">
+        <li><h3>Register students</h3><p>An Admin adds each student with a few clear photos and places them in a section.</p></li>
+        <li><h3>Assign teachers</h3><p>The Admin creates Teacher accounts and assigns them to the sections they teach.</p></li>
+        <li><h3>Take attendance</h3><p>A Teacher selects a section, starts the camera or uploads a photo, and attendance is recorded automatically.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ================= ROLES ================= -->
+  <section class="sec" id="roles" aria-labelledby="h-roles">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2 id="h-roles">Two roles, clear permissions</h2>
+        <p>Admin has full access. Teachers work only inside their assigned sections.</p>
+      </div>
+      <div class="roles-wrap">
+        <table class="roles">
+          <thead><tr><th scope="col">Capability</th><th scope="col">Admin</th><th scope="col">Teacher</th></tr></thead>
+          <tbody>
+            <tr><td>View dashboard, students and records</td><td class="yes">All sections</td><td>Assigned sections</td></tr>
+            <tr><td>Take attendance (camera, photo, manual)</td><td class="yes">All sections</td><td>Assigned sections</td></tr>
+            <tr><td>Delete attendance records</td><td class="yes">Any record</td><td>Only their own</td></tr>
+            <tr><td>Register and edit students</td><td class="yes">✓</td><td class="no">—</td></tr>
+            <tr><td>Create sections and assign teachers</td><td class="yes">✓</td><td class="no">—</td></tr>
+            <tr><td>Manage users, settings and activity log</td><td class="yes">✓</td><td class="no">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DEMO ================= -->
+  <section class="sec alt" id="demo" aria-labelledby="h-demo">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2 id="h-demo">Try the demo</h2>
+        <p>Watch a simulated class scan. It uses made-up students on this page only. No camera is opened, nothing is saved and no real data is touched.</p>
+      </div>
+      <div class="demo-card">
+        <div class="demo-cam idle" id="demoCam">
+          <div class="ph" id="demoPh">Press <b>Start demo</b> to simulate scanning a class.</div>
+          <div class="demo-people" id="demoPeople" aria-hidden="true"></div>
+        </div>
+        <div class="demo-side">
+          <h3>Demo section · DEMO-A</h3>
+          <div class="demo-stats" aria-label="Demo totals">
+            <div><strong id="dPresent">0</strong><span>Present</span></div>
+            <div><strong id="dAbsent">6</strong><span>Absent</span></div>
+            <div><strong id="dRate">0%</strong><span>Rate</span></div>
+          </div>
+          <ul class="demo-log" id="demoLog" aria-live="polite"><li class="empty">No attendance marked yet.</li></ul>
+          <div class="demo-actions">
+            <button class="btn" id="demoStart" type="button">▶ Start demo</button>
+            <button class="btn ghost" id="demoReset" type="button">↺ Reset</button>
+          </div>
+        </div>
+      </div>
+      <p class="demo-note">Simulation for illustration only. In the real app, attendance is saved to Records and can be exported as CSV.</p>
+    </div>
+  </section>
+
+  <!-- ================= FINAL CTA ================= -->
+  <section class="final" aria-labelledby="h-final">
+    <div class="wrap">
+      <h2 id="h-final">Ready to take attendance?</h2>
+      <p>Log in with the account your administrator gave you.</p>
+      <div class="cta-row"><a class="btn btn-light btn-lg" href="/login">Login</a></div>
+    </div>
+  </section>
+</main>
+
+<footer class="lp-foot"><div class="wrap">Face Attendance · Attendance Management System</div></footer>
+
+<script>
+/* Simulated demo: fictional students, no network requests, nothing stored. */
+(() => {
+  const STUDENTS = ['Student 01', 'Student 02', 'Student 03', 'Student 04', 'Student 05', 'Student 06'];
+  const cam = document.getElementById('demoCam'), ph = document.getElementById('demoPh'),
+        people = document.getElementById('demoPeople'), log = document.getElementById('demoLog'),
+        startBtn = document.getElementById('demoStart'), resetBtn = document.getElementById('demoReset');
+  let timer = null, step = 0, marked = 0, running = false;
+
+  people.innerHTML = STUDENTS.map((n, i) =>
+    `<div class="dp" data-i="${i}"><div class="face"></div><span class="tag">${n}</span></div>`).join('');
+  const nodes = [...people.querySelectorAll('.dp')];
+
+  function render() {
+    document.getElementById('dPresent').textContent = marked;
+    document.getElementById('dAbsent').textContent = STUDENTS.length - marked;
+    document.getElementById('dRate').textContent = Math.round(100 * marked / STUDENTS.length) + '%';
+  }
+  function reset() {
+    clearInterval(timer); timer = null; step = 0; marked = 0; running = false;
+    nodes.forEach(n => n.className = 'dp');
+    log.innerHTML = '<li class="empty">No attendance marked yet.</li>';
+    cam.classList.add('idle'); ph.hidden = false; ph.innerHTML = 'Press <b>Start demo</b> to simulate scanning a class.';
+    startBtn.disabled = false; startBtn.textContent = '▶ Start demo'; render();
+  }
+  function tick() {
+    if (step > 0) {                                   // previous student confirmed
+      const prev = nodes[step - 1]; prev.className = 'dp done';
+      if (log.querySelector('.empty')) log.innerHTML = '';
+      const t = new Date().toTimeString().slice(0, 5);
+      log.insertAdjacentHTML('beforeend', `<li><span>${STUDENTS[step - 1]}</span><span><span class="badge ok">Present</span> <span class="muted small">${t}</span></span></li>`);
+      log.scrollTop = log.scrollHeight; marked++; render();
+    }
+    if (step >= STUDENTS.length) {
+      clearInterval(timer); timer = null; running = false;
+      startBtn.disabled = false; startBtn.textContent = '▶ Run again';
+      return;
+    }
+    nodes[step].className = 'dp scan'; step++;       // next student being scanned
+  }
+  function start() {
+    if (running) return;
+    reset(); running = true; cam.classList.remove('idle'); ph.hidden = true;
+    startBtn.disabled = true; startBtn.textContent = 'Scanning…';
+    tick(); timer = setInterval(tick, 1100);
+  }
+  startBtn.onclick = start; resetBtn.onclick = reset;
+  document.getElementById('tryDemo').addEventListener('click', () => setTimeout(start, 450));  // after scrolling to #demo
+  render();
+})();
+</script>
+</body></html>

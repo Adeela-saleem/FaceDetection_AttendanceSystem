@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Take Attendance</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><script src="/static/app.js"></script>
+<script>
+initPage({title: 'Take Attendance', need: 'take_attendance'}).then(main => {
+  main.innerHTML = `
+  <div class="cols">
+    <div class="card">
+      <!-- Section selector -->
+      <div class="sec-select-box" id="secBox">
+        <div>
+          <label>📚 Section</label>
+          <select id="sec" style="font-size:1rem;font-weight:600"></select>
+        </div>
+        <div class="sec-meta hidden" id="secMeta">
+          <span class="badge brand" id="secStudents"></span>
+          <span class="badge" id="secTime"></span>
+        </div>
+      </div>
+      <div class="notice warn hidden" id="nosec"></div>
+
+      <div class="toolbar" style="margin-top:14px">
+        <div><label>Attendance date</label><input type="date" id="sessionDate" required></div>
+        <div><label>Attendance time</label><input type="time" id="sessionTime" required></div>
+      </div>
+
+      <!-- Mode tabs -->
+      <div class="tabs" style="margin-top:14px">
+        <button class="btn sm" id="tLive">📹 Live Camera</button>
+        <button class="btn sm ghost" id="tPhoto">🖼 Upload Photo</button>
+      </div>
+
+      <!-- Live camera panel -->
+      <div id="live">
+        <div class="cam"><div class="ph" id="ph">The camera is off.<br>Click "Start Camera".</div>
+          <video id="v" autoplay muted playsinline></video><canvas id="c"></canvas></div>
+        <div class="toolbar" style="margin:12px 0 0">
+          <button class="btn" id="start">▶ Start Camera</button>
+          <button class="btn ghost hidden" id="stop">⏹ Stop</button>
+        </div>
+        <div class="notice hidden" id="status" style="margin:12px 0 0"></div>
+      </div>
+
+      <!-- Photo upload panel -->
+      <div id="photo" class="hidden">
+        <div class="cam"><div class="ph">Choose a class or individual photo. A group photo is also supported.</div>
+          <img id="pimg" class="hidden"><canvas id="pc"></canvas></div>
+        <div class="toolbar" style="margin:12px 0 0">
+          <input type="file" id="file" accept="image/*">
+          <label style="display:flex;gap:6px;align-items:center;margin:0">
+            <input type="checkbox" id="mark" checked style="width:auto"> Save attendance
+          </label>
+          <button class="btn" id="scan" disabled>🔍 Scan Photo</button>
+        </div>
+        <div id="pres" class="tablewrap" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div>
+      <div class="card">
+        <h2>👁 Currently in Camera</h2>
+        <div id="now" class="muted small">Results will appear here after scanning starts.</div>
+      </div>
+      <div class="card">
+        <h2>📋 Session Attendance</h2>
+        <div id="log" class="tablewrap"></div>
+      </div>
+    </div>
+  </div>`;
+
+  const v = $('#v'), c = $('#c'), status = $('#status');
+  let sections = [];
+  const secId = () => +$('#sec').value || null;
+  $('#sessionDate').value = todayStr();
+  const now = new Date();
+  $('#sessionTime').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  api('/api/sections').then(d => {
+    sections = d.sections;
+    const teacher = ME.role === 'teacher';
+    $('#sec').innerHTML = teacher
+      ? sections.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')
+      : '<option value="">All sections</option>' +
+        sections.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+    if (teacher && !sections.length) {
+      $('#nosec').textContent = 'No section has been assigned to you. Ask an admin to assign one on the Sections page.';
+      $('#nosec').classList.remove('hidden');
+      $('#start').disabled = true;
+      $('#scan').disabled = true;
+    } else if (teacher) {
+      $('#sec').value = sections[0].id;
+    }
+    $('#sec').onchange = updateSecMeta;
+    updateSecMeta();
+  });
+
+  function updateSecMeta() {
+    const s = sections.find(x => x.id === secId());
+    if (s) {
+      $('#secMeta').classList.remove('hidden');
+      $('#secStudents').textContent = `${s.n_students} students`;
+      $('#secTime').textContent = s.class_start && s.class_end ? `⏰ ${s.class_start}–${s.class_end}` : 'No class time';
+    } else {
+      $('#secMeta').classList.add('hidden');
+    }
+  }
+
+  let stream = null, running = false;
+  const say = (msg, kind = '') => { status.className = 'notice ' + kind; status.textContent = msg; };
+
+  /* tabs */
+  const tab = live => {
+    $('#live').classList.toggle('hidden', !live);
+    $('#photo').classList.toggle('hidden', live);
+    $('#tLive').className = 'btn sm' + (live ? '' : ' ghost');
+    $('#tPhoto').className = 'btn sm' + (live ? ' ghost' : '');
+    if (!live) stopLive();
+  };
+  $('#tLive').onclick = () => tab(true);
+  $('#tPhoto').onclick = () => tab(false);
+
+  /* today's log — filtered by selected section */
+  async function loadLog() {
+    const t = todayStr();
+    const sessionDate = $('#sessionDate').value || t;
+    const sid = secId();
+    let url = `/api/attendance?start=${sessionDate}&end=${sessionDate}`;
+    if (sid) url += `&class_name=${encodeURIComponent(sections.find(x=>x.id===sid)?.name||'')}`;
+    const {records} = await api(url);
+    document.getElementById('log').innerHTML = records.length
+      ? `<table><tr><th>Name</th><th>Roll</th><th>Time</th></tr>${
+          records.slice(0, 20).map(r =>
+            `<tr><td>${esc(r.name)}</td><td>${esc(r.roll_no||'-')}</td><td>${r.time.slice(0,5)}</td></tr>`
+          ).join('')}</table>
+         <div class="small muted" style="padding:6px 0">${records.length} present today</div>`
+      : '<div class="empty">No attendance marked yet.</div>';
+  }
+  loadLog(); setInterval(loadLog, 20000);
+  $('#sec').addEventListener('change', loadLog);
+  $('#sessionDate').addEventListener('change', loadLog);
+
+  const stateText = f => !f.student_id
+    ? '<span class="badge bad">Unknown</span>'
+    : f.state === 'marked'   ? '<span class="badge ok">Marked ✅</span>'
+    : f.state === 'already'  ? '<span class="badge">Already marked</span>'
+    : f.state === 'closed'   ? '<span class="badge warn">Outside class time</span>'
+    : f.state === 'other_section' ? '<span class="badge">Different section</span>'
+    : f.state === 'confirming' ? `<span class="badge warn">Confirming ${f.progress[0]}/${f.progress[1]}</span>`
+    : '<span class="badge brand">Recognised</span>';
+
+  /* live camera */
+  async function startLive() {
+    if (ME.role === 'teacher' && !secId()) { say('First select a section above.', 'warn'); return; }
+    $('#start').disabled = true;
+    say('Starting the camera... If a browser prompt appears, allow camera access.');
+    try { stream = await startCamera(v); }
+    catch (e) { say(e.message, 'bad'); $('#start').disabled = false; return; }
+    running = true;
+    $('#ph').classList.add('hidden');
+    $('#start').classList.add('hidden');
+    $('#stop').classList.remove('hidden');
+    say('The camera is running. Look at the camera.', 'ok');
+    loop();
+  }
+  function stopLive() {
+    running = false; stopCamera(stream, v); stream = null;
+    c.getContext('2d').clearRect(0, 0, c.width, c.height);
+    $('#ph').classList.remove('hidden');
+    $('#start').classList.remove('hidden');
+    $('#start').disabled = false;
+    $('#stop').classList.add('hidden');
+  }
+  async function loop() {
+    while (running) {
+      const t0 = performance.now();
+      try {
+        const r = await api('/api/attendance/scan', {method:'POST', body:{
+          image: captureFrame(v, 640, 0.8), mode:'live', mark:true, section_id: secId(),
+          day: $('#sessionDate').value || null, at: $('#sessionTime').value || null
+        }});
+        if (!running) break;
+        drawFaces(c, r.image_size, r.faces);
+        if (!r.registered) say('No students are registered. Add one on the Register Student page.', 'warn');
+
+        document.getElementById('now').innerHTML = r.faces.length
+          ? r.faces.map(f => `<div class="live-item"><b>${esc(f.name)}</b><span class="right">${stateText(f)}</span></div>`).join('')
+          : '<div class="muted small">No face detected.</div>';
+
+        if (r.marked.length) {
+          r.marked.forEach(n => toast(`${n} — Attendance marked ✅`, 'ok'));
+          loadLog();
+        }
+        const closed = r.faces.find(f => f.state === 'closed');
+        if (closed) say(`Outside class time${closed.window ? ` (${closed.window.start}–${closed.window.end})` : ''}. Attendance was not saved.`, 'warn');
+        else if (!status.classList.contains('ok')) say('The camera is running. Look at the camera.', 'ok');
+      } catch(e) {
+        say(e.message, 'bad');
+        if (/face_recognition/.test(e.message)) { stopLive(); break; }
+        await sleep(2000);
+      }
+      await sleep(Math.max(150, 600 - (performance.now() - t0)));
+    }
+  }
+  $('#start').onclick = startLive;
+  $('#stop').onclick = stopLive;
+  addEventListener('pagehide', stopLive);
+
+  /* photo upload */
+  let photoData = null;
+  $('#file').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { photoData = await fileToDataURL(f, 1000); } catch(x) { toast(x.message, 'bad'); return; }
+    $('#pimg').src = photoData; $('#pimg').classList.remove('hidden'); $('#scan').disabled = false;
+    $('#pc').getContext('2d').clearRect(0, 0, 9999, 9999); document.getElementById('pres').innerHTML = '';
+  };
+  $('#scan').onclick = async () => {
+    $('#scan').disabled = true;
+    try {
+      const r = await api('/api/attendance/scan', {method:'POST', body:{
+        image: photoData, mode:'photo', mark: $('#mark').checked, section_id: secId(),
+        day: $('#sessionDate').value || null, at: $('#sessionTime').value || null
+      }});
+      drawFaces($('#pc'), r.image_size, r.faces);
+      document.getElementById('pres').innerHTML = r.faces.length
+        ? `<table><tr><th>Name</th><th>Result</th></tr>${
+            r.faces.map(f => `<tr><td>${esc(f.name)}</td><td>${stateText(f)}</td></tr>`).join('')}</table>`
+        : '<div class="empty">No face detected.</div>';
+      if (r.marked.length) { toast(`Attendance marked for ${r.marked.length} student(s) ✅`, 'ok'); loadLog(); }
+    } catch(e) { toast(e.message, 'bad'); }
+    $('#scan').disabled = false;
+  };
+});
+</script></body></html>
